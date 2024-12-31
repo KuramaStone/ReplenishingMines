@@ -23,7 +23,7 @@ public class LootManager {
 
         YamlDocument document = YamlDocument.create(
                 new File(new File(FabricLoader.getInstance().getConfigDir().toFile(), ReplenishingMines.MODID), "loot tables.yml"),
-                ReplenishingMines.class.getResourceAsStream("/loot tables.yml")
+                ReplenishingMines.class.getResourceAsStream("/replenishingmines.configs/loot tables.yml")
         );
 
         for (Object idObj : document.getKeys()) {

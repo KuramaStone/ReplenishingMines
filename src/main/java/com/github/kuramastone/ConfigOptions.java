@@ -14,7 +14,7 @@ public class ConfigOptions {
         try {
             YamlDocument document = YamlDocument.create(
                     new File(new File(FabricLoader.getInstance().getConfigDir().toFile(), ReplenishingMines.MODID), "config.yml"),
-                    getClass().getResourceAsStream("/config.yml")
+                    getClass().getResourceAsStream("/replenishingmines.configs/config.yml")
             );
 
             instantRegenBlocksPerTick = Math.max(1, document.getInt("Settings.instant regen.blocks per tick"));
