@@ -50,7 +50,7 @@ public class RegenMineCommand {
                         .then(CommandManager.literal("modify")
                                 .then(CommandManager.argument("name", StringArgumentType.string()).suggests(RegenMineCommand::suggestRegions)
                                         .then(CommandManager.literal("brushloot")
-                                                .then(CommandManager.argument("lootName", StringArgumentType.string())
+                                                .then(CommandManager.argument("lootName", StringArgumentType.string()).suggests(RegenMineCommand::suggestLoot)
                                                         .executes(RegenMineCommand::modifyBrushLoot))
                                         )
                                         .then(CommandManager.literal("regenSpeedInTicks")
@@ -125,7 +125,9 @@ public class RegenMineCommand {
         region.saveData();
 
         ReplenishingMines.getApi().registerRegion(name, region);
-        context.getSource().sendFeedback(() -> Text.literal("Region '" + name + "' created in dimension '" + dimension + "' from " + blockPos1 + " to " + blockPos2 + ".").formatted(Formatting.GREEN), false);
+        context.getSource().sendFeedback(() -> Text.literal("Region '" + name + "' created in dimension '" + dimension.getRegistryKey().getValue().toString() + "' from "
+                + "%s/%s/%s".formatted(blockPos1.getX(), blockPos1.getY(), blockPos1.getZ()) + " to "
+                + "%s/%s/%s".formatted(blockPos2.getX(), blockPos2.getY(), blockPos2.getZ()) + ".").formatted(Formatting.GREEN), false);
         return Command.SINGLE_SUCCESS;
     }
 
