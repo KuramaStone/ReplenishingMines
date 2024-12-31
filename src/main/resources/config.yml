@@ -1,0 +1,4 @@
+Settings:
+  # When regen is set to instant, this is how fast it will regenerate.
+  instant regen:
+    blocks per tick: 8
