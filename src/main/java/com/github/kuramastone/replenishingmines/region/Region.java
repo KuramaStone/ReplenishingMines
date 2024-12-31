@@ -53,6 +53,8 @@ public class Region {
     }
 
     public void regenTick() {
+        if(regenSpeedInTicks <= 0)
+            return;
 
         if (regenInstantly && !temporarilyInstant) {
             if (currentRegenTimerIndex >= regenSpeedInTicks) {
