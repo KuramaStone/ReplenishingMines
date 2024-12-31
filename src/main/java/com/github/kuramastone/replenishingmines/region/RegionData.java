@@ -27,6 +27,7 @@ public class RegionData {
 
     public RegionData(List<Pair<BlockPos, BlockState>> statesByPosition) {
         this.statesByPosition = statesByPosition;
+        sort();
     }
 
     public RegionData(Section section) {
@@ -41,6 +42,10 @@ public class RegionData {
                 }
             }
         }
+        sort();
+    }
+
+    private void sort() {
         statesByPosition.sort(Comparator
                 .comparing((Pair<BlockPos, BlockState> pair) -> pair.getLeft().getY())
                 .thenComparing(pair -> pair.getLeft().getX())
