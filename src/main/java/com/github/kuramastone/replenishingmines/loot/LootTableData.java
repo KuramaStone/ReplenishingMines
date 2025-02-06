@@ -20,15 +20,16 @@ public record LootTableData(List<LootTableItemEntry> items) {
     public ItemStack getLoot(long seed) {
         Random random = new Random(seed);
 
-        int sum = items.stream().flatMapToInt(l-> IntStream.of(l.weight())).sum();
+        int sum = items.stream().flatMapToInt(l -> IntStream.of(l.weight())).sum();
         int rnd = random.nextInt(sum);
 
         int running = 0;
         for (LootTableItemEntry item : items) {
-            if(rnd <= (running += item.weight())) {
+            if (rnd <= (running += item.weight())) {
                 ItemStack itemstack = item.item().getDefaultStack();
                 itemstack.setCount(item.amount());
-                itemstack.set(DataComponentTypes.CUSTOM_MODEL_DATA, new CustomModelDataComponent(item.custommodeldata()));
+                if (item.custommodeldata() != 0)
+                    itemstack.set(DataComponentTypes.CUSTOM_MODEL_DATA, new CustomModelDataComponent(item.custommodeldata()));
 
                 return itemstack;
             }

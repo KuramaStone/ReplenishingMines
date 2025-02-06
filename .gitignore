@@ -11,7 +11,7 @@ classes/
 
 # idea
 
-.idea/
+.idea2/
 *.iml
 *.ipr
 *.iws
@@ -41,5 +41,6 @@ replay_*.log
 
 .github/
 .gradle/
-.idea/
+.idea/*
 run/
+libs/

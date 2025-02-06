@@ -1,8 +1,7 @@
 package com.github.kuramastone;
 
 import com.github.kuramastone.replenishingmines.region.Region;
-import com.github.kuramastone.replenishingmines.region.RegionData;
-import com.github.kuramastone.utils.LuckPermsUtils;
+import com.github.kuramastone.utils.PermissionUtils;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
@@ -14,9 +13,6 @@ import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import net.minecraft.command.CommandRegistryAccess;
 import net.minecraft.command.argument.BlockPosArgumentType;
 import net.minecraft.command.argument.DimensionArgumentType;
-import net.minecraft.command.argument.RegistryEntryArgumentType;
-import net.minecraft.loot.LootTable;
-import net.minecraft.registry.RegistryKey;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.world.ServerWorld;
@@ -83,11 +79,12 @@ public class RegenMineCommand {
             return true;
         }
 
-        return LuckPermsUtils.hasPermission(source.getEntity().getUuidAsString(), "ReplenishingMines.admin");
+        return PermissionUtils.hasPermission(source.getEntity().getUuid(), "ReplenishingMines.admin");
     }
 
     private static int reload(CommandContext<ServerCommandSource> context) {
         ReplenishingMines.getApi().reload();
+        context.getSource().sendMessage(Text.literal("Reloaded!"));
         return Command.SINGLE_SUCCESS;
     }
 

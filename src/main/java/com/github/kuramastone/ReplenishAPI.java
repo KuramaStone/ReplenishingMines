@@ -5,7 +5,6 @@ import com.github.kuramastone.replenishingmines.region.Region;
 import com.github.kuramastone.replenishingmines.region.RegionData;
 import dev.dejvokep.boostedyaml.YamlDocument;
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.loot.LootTable;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.RegistryKeys;
 import net.minecraft.server.world.ServerWorld;

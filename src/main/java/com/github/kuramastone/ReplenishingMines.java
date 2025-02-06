@@ -26,7 +26,6 @@ public class ReplenishingMines implements ModInitializer {
         ServerLifecycleEvents.SERVER_STOPPING.register(ms -> api.saveRegions());
         CommandRegistrationCallback.EVENT.register(RegenMineCommand::registerCommands);
         Scheduler.init();
-
     }
 
     private void onStarted(MinecraftServer ms) {
