@@ -1,4 +1,4 @@
-package com.github.kuramastone;
+package com.github.kuramastone.replenishingmines;
 
 import dev.dejvokep.boostedyaml.YamlDocument;
 import net.fabricmc.loader.api.FabricLoader;

@@ -1,4 +1,4 @@
-package com.github.kuramastone;
+package com.github.kuramastone.replenishingmines;
 
 import com.github.kuramastone.replenishingmines.loot.LootManager;
 import com.github.kuramastone.replenishingmines.region.Region;

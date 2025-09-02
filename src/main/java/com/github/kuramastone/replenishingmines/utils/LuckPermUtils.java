@@ -1,8 +1,6 @@
-package com.github.kuramastone.utils;
+package com.github.kuramastone.replenishingmines.utils;
 
-import com.github.kuramastone.ReplenishingMines;
-import me.lucko.fabric.api.permissions.v0.Permissions;
-import net.minecraft.server.network.ServerPlayerEntity;
+import com.github.kuramastone.replenishingmines.ReplenishingMines;
 
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;

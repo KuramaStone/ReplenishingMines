@@ -16,7 +16,7 @@
 	"environment": "*",
 	"entrypoints": {
 		"main": [
-			"com.github.kuramastone.ReplenishingMines"
+          "com.github.kuramastone.replenishingmines.ReplenishingMines"
 		],
 		"client": [
 			"com.github.kuramastone.ReplenishingMinesClient"

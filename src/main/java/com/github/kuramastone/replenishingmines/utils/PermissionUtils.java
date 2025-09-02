@@ -1,12 +1,10 @@
-package com.github.kuramastone.utils;
+package com.github.kuramastone.replenishingmines.utils;
 
-import com.github.kuramastone.ReplenishingMines;
+import com.github.kuramastone.replenishingmines.ReplenishingMines;
 import me.lucko.fabric.api.permissions.v0.Permissions;
-import net.luckperms.api.LuckPerms;
 import net.minecraft.server.network.ServerPlayerEntity;
 
 import java.util.UUID;
-import java.util.concurrent.ExecutionException;
 
 /**
  * Does not use imports for luckperms to avoid

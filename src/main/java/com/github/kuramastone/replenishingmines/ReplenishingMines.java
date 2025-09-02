@@ -1,7 +1,7 @@
-package com.github.kuramastone;
+package com.github.kuramastone.replenishingmines;
 
 import com.github.kuramastone.replenishingmines.region.Region;
-import com.github.kuramastone.utils.Scheduler;
+import com.github.kuramastone.replenishingmines.utils.Scheduler;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;

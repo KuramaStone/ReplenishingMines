@@ -1,6 +1,6 @@
 package com.github.kuramastone.replenishingmines.loot;
 
-import com.github.kuramastone.ReplenishingMines;
+import com.github.kuramastone.replenishingmines.ReplenishingMines;
 import dev.dejvokep.boostedyaml.YamlDocument;
 import dev.dejvokep.boostedyaml.block.implementation.Section;
 import net.fabricmc.loader.api.FabricLoader;

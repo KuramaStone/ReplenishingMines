@@ -1,7 +1,7 @@
-package com.github.kuramastone;
+package com.github.kuramastone.replenishingmines;
 
 import com.github.kuramastone.replenishingmines.region.Region;
-import com.github.kuramastone.utils.PermissionUtils;
+import com.github.kuramastone.replenishingmines.utils.PermissionUtils;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;

@@ -1,22 +1,16 @@
 package com.github.kuramastone.replenishingmines.region;
 
-import com.github.kuramastone.ReplenishingMines;
-import com.github.kuramastone.utils.BrushableBlockEntityUtils;
+import com.github.kuramastone.replenishingmines.ReplenishingMines;
+import com.github.kuramastone.replenishingmines.utils.BrushableBlockEntityUtils;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.BrushableBlock;
 import net.minecraft.block.entity.BrushableBlockEntity;
-import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
-import net.minecraft.loot.LootTable;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.Heightmap;
 import org.apache.commons.lang3.tuple.Pair;
-import org.apache.logging.log4j.core.jmx.Server;
 
 import java.util.*;
 

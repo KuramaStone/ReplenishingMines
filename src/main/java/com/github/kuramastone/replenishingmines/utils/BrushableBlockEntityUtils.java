@@ -1,4 +1,4 @@
-package com.github.kuramastone.utils;
+package com.github.kuramastone.replenishingmines.utils;
 
 import net.minecraft.block.entity.BrushableBlockEntity;
 import net.minecraft.item.ItemStack;
