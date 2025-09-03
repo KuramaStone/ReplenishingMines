@@ -1,11 +1,18 @@
 package com.github.kuramastone.replenishingmines.region;
 
 import com.github.kuramastone.replenishingmines.ReplenishingMines;
+import com.github.kuramastone.replenishingmines.blocktable.BlockTableData;
+import com.github.kuramastone.replenishingmines.blocktable.BlockTableDataEntry;
+import com.github.kuramastone.replenishingmines.blocktable.BlockTableReplacement;
 import com.github.kuramastone.replenishingmines.utils.BrushableBlockEntityUtils;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
+import net.minecraft.block.Blocks;
 import net.minecraft.block.BrushableBlock;
+import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.BrushableBlockEntity;
+import net.minecraft.command.argument.BlockStateArgument;
+import net.minecraft.inventory.Inventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
@@ -17,6 +24,7 @@ import java.util.*;
 public class Region {
 
     // constructor values
+    private final String id;
     private final ServerWorld world;
     private final BlockPos low;
     private final BlockPos high;
@@ -29,14 +37,17 @@ public class Region {
     private RegionData data;
 
     private int currentRegenTimerIndex = 0; // regen timer
-    private double currentBlockIndex = 0; // The current index of block placement
+    private double currentBlockIndex = 0; // The current index of state placement
     private boolean temporarilyInstant = false;
 
-    public Region(ServerWorld world, BlockPos low, BlockPos high, String brushableBlockLootTableID, int regenSpeedInTicks, boolean regenInstantly) {
-        this(world, low, high, brushableBlockLootTableID, regenSpeedInTicks, regenInstantly, null);
+    private Map<BlockState, BlockTableReplacement> blockTableReplacements;
+
+    public Region(String id, ServerWorld world, BlockPos low, BlockPos high, String brushableBlockLootTableID, int regenSpeedInTicks, boolean regenInstantly) {
+        this(id, world, low, high, brushableBlockLootTableID, regenSpeedInTicks, regenInstantly, null, null);
     }
 
-    public Region(ServerWorld world, BlockPos low, BlockPos high, String brushableBlockLootTableID, int regenSpeedInTicks, boolean regenInstantly, RegionData data) {
+    public Region(String id, ServerWorld world, BlockPos low, BlockPos high, String brushableBlockLootTableID, int regenSpeedInTicks, boolean regenInstantly, RegionData data, Map<BlockState, BlockTableReplacement> replacementMap) {
+        this.id = id;
         this.world = world;
         this.low = new BlockPos(Math.min(low.getX(), high.getX()), Math.min(low.getY(), high.getY()), Math.min(low.getZ(), high.getZ()));
         this.high = new BlockPos(Math.max(low.getX(), high.getX()), Math.max(low.getY(), high.getY()), Math.max(low.getZ(), high.getZ()));
@@ -44,10 +55,11 @@ public class Region {
         this.regenSpeedInTicks = regenSpeedInTicks;
         this.regenInstantly = regenInstantly;
         this.data = data;
+        this.blockTableReplacements = replacementMap == null ? new HashMap<>() : replacementMap;
     }
 
     public void regenTick() {
-        if(regenSpeedInTicks <= 0)
+        if (regenSpeedInTicks <= 0)
             return;
 
         if (regenInstantly && !temporarilyInstant) {
@@ -71,7 +83,7 @@ public class Region {
             blocksToRegen = getRegenSpeed();
         }
 
-        if(blocksToRegen <= 0)
+        if (blocksToRegen <= 0)
             return;
 
         List<ServerPlayerEntity> nearbyPlayers = world.getPlayers(p -> this.contains(world, p.getBlockPos()));
@@ -183,10 +195,29 @@ public class Region {
     private void regenerate(List<ServerPlayerEntity> nearby, Pair<BlockPos, BlockState> pair) {
         BlockPos offset = pair.getKey();
         BlockPos positionInWorld = low.mutableCopy().add(offset);
-        BlockState state = pair.getRight();
+        BlockStateArgument state = new BlockStateArgument(pair.getRight(), new HashSet<>(), null);
+        BlockState existingState = world.getBlockState(positionInWorld);
+
+        // swap out the replacement state if this state matches
+        if (blockTableReplacements.containsKey(state.getBlockState())) {
+            BlockTableReplacement replacement = blockTableReplacements.get(state.getBlockState());
+            BlockTableData data = replacement.getBlockTable();
+            if (data != null) {
+                BlockTableDataEntry entry = data.random();
+                if (entry != null) {
+                    state = entry.state();
+                }
+                else {
+                    ReplenishingMines.LOGGER.warn("Unable to find an entry in the block list while regenerating %s! This block table: %s".formatted(this.id, replacement.blockTable()));
+                }
+            }
+            else {
+                ReplenishingMines.LOGGER.warn("Unable to replace a state state while regenerating %s. This block table doesnt exist: %s".formatted(this.id, replacement.blockTable()));
+            }
+        }
 
         int flags = Block.NOTIFY_LISTENERS | Block.FORCE_STATE;
-        world.setBlockState(positionInWorld, state, flags, 0);
+        setBlockState(state, world, positionInWorld, flags, true);
 
         List<ServerPlayerEntity> inBlock = nearby.stream().filter(p -> p.getBlockPos().equals(positionInWorld)).toList();
         for (ServerPlayerEntity serverPlayerEntity : inBlock) {
@@ -195,22 +226,55 @@ public class Region {
                     serverPlayerEntity.getYaw(), serverPlayerEntity.getPitch());
         }
 
-        // if the block is BrushableBlock, then manually set the loot tables
-        if (state.getBlock() instanceof BrushableBlock) {
+        // if the state is BrushableBlock, then manually set the loot tables
+        if (state.getBlockState().getBlock() instanceof BrushableBlock) {
             BrushableBlockEntity blockEntity = (BrushableBlockEntity) world.getBlockEntity(positionInWorld);
-            Objects.requireNonNull(blockEntity, "BrushableBlockEntity is null.");
-            long seed = world.getSeed() + positionInWorld.getX() * 74355L - positionInWorld.getY() * 412541L + positionInWorld.getZ() * 6235L;
+            if(blockEntity != null) {
+                if(blockEntity.getItem().isEmpty()) {
+                    long seed = world.getSeed() + positionInWorld.getX() * 74355L - positionInWorld.getY() * 412541L + positionInWorld.getZ() * 6235L;
 
-            if (brushableBlockLootTable != null) {
-                ItemStack loot = ReplenishingMines.getApi().getLootManager().getLoot(brushableBlockLootTable).getLoot(seed);
-                BrushableBlockEntityUtils.setItem(blockEntity, loot);
-            }
-            else {
-                BrushableBlockEntityUtils.setSeed(blockEntity, seed);
+                    if (brushableBlockLootTable != null) {
+                        ItemStack loot = ReplenishingMines.getApi().getLootManager().getLoot(brushableBlockLootTable).getLoot(seed);
+                        BrushableBlockEntityUtils.setItem(blockEntity, loot);
+                    }
+                    else {
+                        BrushableBlockEntityUtils.setSeed(blockEntity, seed);
+                    }
+                }
             }
 
         }
 
+    }
+
+    // needed this custom version to change maxUpdateDepth
+    public boolean setBlockState(BlockStateArgument arg, ServerWorld world, BlockPos pos, int flags, boolean clearInventories) {
+        // it doesnt actually skip drops, so we'll do the check.
+        if(clearInventories) {
+            BlockEntity blockEntity = world.getBlockEntity(pos);
+            if (blockEntity instanceof Inventory blockInventory) {
+                blockInventory.clear();
+                world.setBlockState(pos, Blocks.AIR.getDefaultState(), flags, 0);
+            }
+        }
+
+        BlockState blockState = Block.postProcessState(arg.getBlockState(), world, pos);
+        if (blockState.isAir()) {
+            blockState = arg.getBlockState();
+        }
+
+        if (!world.setBlockState(pos, blockState, flags, 0)) {
+            return false;
+        } else {
+            if (arg.data != null) {
+                BlockEntity blockEntity = world.getBlockEntity(pos);
+                if (blockEntity != null) {
+                    blockEntity.read(arg.data, world.getRegistryManager());
+                }
+            }
+
+            return true;
+        }
     }
 
     public BlockPos getLow() {
@@ -257,10 +321,18 @@ public class Region {
         return data;
     }
 
+    public Map<BlockState, BlockTableReplacement> getBlockTableReplacements() {
+        return blockTableReplacements;
+    }
+
     /**
      * Set the regen timer to the end to cause it to instantly regenerate
      */
     public void regenImmediately() {
         this.temporarilyInstant = true;
+    }
+
+    public void addBlockTableReplacement(BlockTableReplacement blockTableReplacement) {
+        blockTableReplacements.put(blockTableReplacement.state(), blockTableReplacement);
     }
 }

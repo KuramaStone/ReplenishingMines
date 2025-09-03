@@ -1,23 +1,37 @@
 package com.github.kuramastone.replenishingmines;
 
+import com.github.kuramastone.replenishingmines.blocktable.BlockTableManager;
+import com.github.kuramastone.replenishingmines.blocktable.BlockTableReplacement;
 import com.github.kuramastone.replenishingmines.loot.LootManager;
 import com.github.kuramastone.replenishingmines.region.Region;
 import com.github.kuramastone.replenishingmines.region.RegionData;
+import com.github.kuramastone.replenishingmines.utils.BlockUtils;
+import com.mojang.brigadier.StringReader;
 import dev.dejvokep.boostedyaml.YamlDocument;
+import dev.dejvokep.boostedyaml.block.implementation.Section;
 import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.block.BlockState;
+import net.minecraft.command.argument.BlockStateArgument;
+import net.minecraft.command.argument.BlockStateArgumentType;
+import net.minecraft.nbt.NbtCompound;
+import net.minecraft.registry.Registries;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.RegistryKeys;
+import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.world.ServerWorld;
+import net.minecraft.state.property.Property;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import javax.print.attribute.standard.DocumentName;
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class ReplenishAPI {
 
@@ -25,19 +39,29 @@ public class ReplenishAPI {
     private Map<String, Region> regionMap;
     private ConfigOptions configOptions;
     private LootManager lootManager;
+    private BlockTableManager blockTableManager;
 
     public ReplenishAPI() {
         loadConfig();
         loadRegions();
         loadLootTables();
+        loadBlockTables();
+    }
+
+    private void loadBlockTables() {
+        blockTableManager = new BlockTableManager();
+        try {
+            blockTableManager.load();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private void loadLootTables() {
         lootManager = new LootManager();
         try {
             lootManager.load();
-        }
-        catch (IOException e) {
+        } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
@@ -68,13 +92,24 @@ public class ReplenishAPI {
                     int regenSpeed = document.getInt("%s.regenSpeed".formatted(id));
                     boolean regenInstantly = document.getBoolean("%s.regenInstantly".formatted(id));
                     RegionData data = new RegionData(document.getSection("%s.data".formatted(id)));
+                    Map<BlockState, BlockTableReplacement> replacements = new HashMap<>();
+                    Section replacementsSection = document.getSection("%s.blockReplacements".formatted(id));
+                    if(replacementsSection != null) {
+                        for (Object stateKey : replacementsSection.getKeys()) {
+                            try {
+                                BlockState state = BlockUtils.parseBlockState(stateKey.toString()).getBlockState();
+                                replacements.put(state, new BlockTableReplacement(state, replacementsSection.getString("%s".formatted(stateKey.toString()))));
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    }
 
-                    regionMap.put(id, new Region(world, low, high, lootID, regenSpeed, regenInstantly, data));
+                    regionMap.put(id, new Region(id, world, low, high, lootID, regenSpeed, regenInstantly, data, replacements));
                 }
             }
 
-        }
-        catch (IOException e) {
+        } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
@@ -99,13 +134,16 @@ public class ReplenishAPI {
                 document.set("%s.lootID".formatted(id), region.getBrushableBlockLootTable());
                 document.set("%s.regenSpeed".formatted(id), region.getRegenSpeedInTicks());
                 document.set("%s.regenInstantly".formatted(id), region.shouldRegenInstantly());
+                region.getBlockTableReplacements().forEach((state, replacement) -> {
+                    String stateString = BlockUtils.blockStateToString(state);
+                    document.set("%s.blockReplacements.%s".formatted(id, stateString), replacement.blockTable());
+                });
                 region.getData().saveTo(document.createSection("%s.data".formatted(id)));
             }
 
             // Save changes to the file
             document.save();
-        }
-        catch (IOException e) {
+        } catch (IOException e) {
             throw new RuntimeException("Failed to save regions to regions.data", e);
         }
 
@@ -135,8 +173,13 @@ public class ReplenishAPI {
         return lootManager;
     }
 
+    public BlockTableManager getBlockTableManager() {
+        return blockTableManager;
+    }
+
     public void reload() {
         loadLootTables();
         loadConfig();
+        loadBlockTables();
     }
 }

@@ -1,5 +1,7 @@
 package com.github.kuramastone.replenishingmines;
 
+import com.github.kuramastone.replenishingmines.blocktable.BlockTableData;
+import com.github.kuramastone.replenishingmines.blocktable.BlockTableReplacement;
 import com.github.kuramastone.replenishingmines.region.Region;
 import com.github.kuramastone.replenishingmines.utils.PermissionUtils;
 import com.mojang.brigadier.Command;
@@ -10,8 +12,10 @@ import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
+import net.minecraft.block.BlockState;
 import net.minecraft.command.CommandRegistryAccess;
 import net.minecraft.command.argument.BlockPosArgumentType;
+import net.minecraft.command.argument.BlockStateArgumentType;
 import net.minecraft.command.argument.DimensionArgumentType;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
@@ -22,60 +26,88 @@ import net.minecraft.util.math.BlockPos;
 
 import java.util.concurrent.CompletableFuture;
 
+import static net.minecraft.server.command.CommandManager.*;
+
 public class RegenMineCommand {
 
     public static void registerCommands(CommandDispatcher<ServerCommandSource> dispatcher, CommandRegistryAccess commandRegistryAccess, CommandManager.RegistrationEnvironment registrationEnvironment) {
         dispatcher.register(
-                CommandManager.literal("regenmine")
+                literal("regenmine")
                         .requires(RegenMineCommand::permissionCheck)
-                        .then(CommandManager.literal("create")
-                                .then(CommandManager.argument("name", StringArgumentType.string()).suggests(RegenMineCommand::suggestRegions)
-                                        .then(CommandManager.argument("dimension", DimensionArgumentType.dimension())
-                                                .then(CommandManager.argument("blockpos1", BlockPosArgumentType.blockPos())
-                                                        .then(CommandManager.argument("blockpos2", BlockPosArgumentType.blockPos())
+                        .then(literal("create")
+                                .then(argument("id", StringArgumentType.string()).suggests(RegenMineCommand::suggestRegions)
+                                        .then(argument("dimension", DimensionArgumentType.dimension())
+                                                .then(argument("blockpos1", BlockPosArgumentType.blockPos())
+                                                        .then(argument("blockpos2", BlockPosArgumentType.blockPos())
                                                                 .executes(RegenMineCommand::create))
                                                 )
                                         )
                                 )
                         )
-                        .then(CommandManager.literal("delete")
-                                .then(CommandManager.argument("name", StringArgumentType.string()).suggests(RegenMineCommand::suggestRegions)
+                        .then(literal("delete")
+                                .then(argument("id", StringArgumentType.string()).suggests(RegenMineCommand::suggestRegions)
                                         .executes(RegenMineCommand::delete)
                                 )
                         )
-                        .then(CommandManager.literal("modify")
-                                .then(CommandManager.argument("name", StringArgumentType.string()).suggests(RegenMineCommand::suggestRegions)
-                                        .then(CommandManager.literal("brushloot")
-                                                .then(CommandManager.argument("lootName", StringArgumentType.string()).suggests(RegenMineCommand::suggestLoot)
+                        .then(literal("modify")
+                                .then(argument("id", StringArgumentType.string()).suggests(RegenMineCommand::suggestRegions)
+                                        .then(literal("brushloot")
+                                                .then(argument("lootName", StringArgumentType.string()).suggests(RegenMineCommand::suggestLoot)
                                                         .executes(RegenMineCommand::modifyBrushLoot))
                                         )
-                                        .then(CommandManager.literal("regenSpeedInTicks")
-                                                .then(CommandManager.argument("regenSpeedInTicks", IntegerArgumentType.integer(0, Integer.MAX_VALUE))
+                                        .then(literal("replacements")
+                                                .then(argument("blockToReplace", BlockStateArgumentType.blockState(commandRegistryAccess))
+                                                        .then(argument("blockTable", StringArgumentType.string()).suggests(RegenMineCommand::suggestBlockTables)
+                                                                .executes(RegenMineCommand::replaceBlockTable)))
+                                        )
+                                        .then(literal("regenSpeedInTicks")
+                                                .then(argument("regenSpeedInTicks", IntegerArgumentType.integer(0, Integer.MAX_VALUE))
                                                         .executes(RegenMineCommand::modifyRegenSpeedInTicks))
                                         )
-                                        .then(CommandManager.literal("regenInstantly")
-                                                .then(CommandManager.argument("regenInstantly", StringArgumentType.word()).suggests(RegenMineCommand::suggestBoolean)
+                                        .then(literal("regenInstantly")
+                                                .then(argument("regenInstantly", StringArgumentType.word()).suggests(RegenMineCommand::suggestBoolean)
                                                         .executes(RegenMineCommand::modifyRegenInstantly))
                                         )
-                                        .then(CommandManager.literal("save")
+                                        .then(literal("save")
                                                 .executes(RegenMineCommand::modifySave)
                                         )
                                 )
                         )
-                        .then(CommandManager.literal("regen")
-                                .then(CommandManager.argument("name", StringArgumentType.string()).suggests(RegenMineCommand::suggestRegions)
+                        .then(literal("regen")
+                                .then(argument("id", StringArgumentType.string()).suggests(RegenMineCommand::suggestRegions)
                                         .executes(RegenMineCommand::regenInstantly)))
-                        .then(CommandManager.literal("reload")
+                        .then(literal("reload")
                                 .executes(RegenMineCommand::reload))
         );
     }
 
+    private static int replaceBlockTable(CommandContext<ServerCommandSource> context) {
+        String name = StringArgumentType.getString(context, "id");
+        String blockTable = StringArgumentType.getString(context, "blockTable");
+        BlockState blockState = BlockStateArgumentType.getBlockState(context, "blockToReplace").getBlockState();
+
+        if (ReplenishingMines.getApi().getRegion(name) == null) {
+            context.getSource().sendMessage(Text.literal("Unknown region!").formatted(Formatting.RED));
+            return 0;
+        }
+
+        BlockTableData blockTableData = ReplenishingMines.getApi().getBlockTableManager().getTable(blockTable);
+        if (blockTableData == null) {
+            context.getSource().sendMessage(Text.literal("Unknown state table! Don't forget to set it up!").formatted(Formatting.RED));
+        }
+        ReplenishingMines.getApi().getRegion(name).addBlockTableReplacement(new BlockTableReplacement(blockState, blockTable));
+
+        // Your logic to modify the loot of the regen mine
+        context.getSource().sendFeedback(() -> Text.literal("Region '" + name + "' will now replace the specified state state with the '" + blockTable + "' table.").formatted(Formatting.GREEN), false);
+        return Command.SINGLE_SUCCESS;
+    }
+
     private static boolean permissionCheck(ServerCommandSource source) {
-        if(source.hasPermissionLevel(2)) {
+        if (source.hasPermissionLevel(2)) {
             return true;
         }
 
-        if(source.getEntity() == null) {
+        if (source.getEntity() == null) {
             return true;
         }
 
@@ -102,6 +134,14 @@ public class RegenMineCommand {
         return suggestionsBuilder.buildFuture();
     }
 
+    private static CompletableFuture<Suggestions> suggestBlockTables(CommandContext<ServerCommandSource> context, SuggestionsBuilder suggestionsBuilder) {
+        for (String id : ReplenishingMines.getApi().getBlockTableManager().getBlockTables().keySet()) {
+            suggestionsBuilder.suggest(id);
+        }
+
+        return suggestionsBuilder.buildFuture();
+    }
+
     private static CompletableFuture<Suggestions> suggestRegions(CommandContext<ServerCommandSource> serverCommandSourceCommandContext, SuggestionsBuilder suggestionsBuilder) {
         for (String id : ReplenishingMines.getApi().getRegionMap().keySet()) {
             suggestionsBuilder.suggest(id);
@@ -111,25 +151,25 @@ public class RegenMineCommand {
     }
 
     private static int create(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
-        String name = StringArgumentType.getString(context, "name");
+        String id = StringArgumentType.getString(context, "id");
         ServerWorld dimension = DimensionArgumentType.getDimensionArgument(context, "dimension");
         BlockPos blockPos1 = BlockPosArgumentType.getBlockPos(context, "blockpos1");
         BlockPos blockPos2 = BlockPosArgumentType.getBlockPos(context, "blockpos2");
 
         // Your logic to create the regen mine
 
-        Region region = new Region(dimension, blockPos1, blockPos2, null, 20 * 60, false);
+        Region region = new Region(id, dimension, blockPos1, blockPos2, null, 20 * 60, false);
         region.saveData();
 
-        ReplenishingMines.getApi().registerRegion(name, region);
-        context.getSource().sendFeedback(() -> Text.literal("Region '" + name + "' created in dimension '" + dimension.getRegistryKey().getValue().toString() + "' from "
+        ReplenishingMines.getApi().registerRegion(id, region);
+        context.getSource().sendFeedback(() -> Text.literal("Region '" + id + "' created in dimension '" + dimension.getRegistryKey().getValue().toString() + "' from "
                 + "%s/%s/%s".formatted(blockPos1.getX(), blockPos1.getY(), blockPos1.getZ()) + " to "
                 + "%s/%s/%s".formatted(blockPos2.getX(), blockPos2.getY(), blockPos2.getZ()) + ".").formatted(Formatting.GREEN), false);
         return Command.SINGLE_SUCCESS;
     }
 
     private static int delete(CommandContext<ServerCommandSource> context) {
-        String name = StringArgumentType.getString(context, "name");
+        String name = StringArgumentType.getString(context, "id");
 
 
         if (ReplenishingMines.getApi().getRegion(name) == null) {
@@ -144,7 +184,7 @@ public class RegenMineCommand {
     }
 
     private static int modifyBrushLoot(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
-        String name = StringArgumentType.getString(context, "name");
+        String name = StringArgumentType.getString(context, "id");
         String lootName = StringArgumentType.getString(context, "lootName");
 
         if (ReplenishingMines.getApi().getRegion(name) == null) {
@@ -160,7 +200,7 @@ public class RegenMineCommand {
     }
 
     private static int modifyRegenSpeedInTicks(CommandContext<ServerCommandSource> context) {
-        String name = StringArgumentType.getString(context, "name");
+        String name = StringArgumentType.getString(context, "id");
         int regenSpeed = IntegerArgumentType.getInteger(context, "regenSpeedInTicks");
 
         if (ReplenishingMines.getApi().getRegion(name) == null) {
@@ -176,7 +216,7 @@ public class RegenMineCommand {
     }
 
     private static int modifyRegenInstantly(CommandContext<ServerCommandSource> context) {
-        String name = StringArgumentType.getString(context, "name");
+        String name = StringArgumentType.getString(context, "id");
         String string = StringArgumentType.getString(context, "regenInstantly");
 
         boolean regenInstantly;
@@ -202,7 +242,7 @@ public class RegenMineCommand {
     }
 
     private static int modifySave(CommandContext<ServerCommandSource> context) {
-        String name = StringArgumentType.getString(context, "name");
+        String name = StringArgumentType.getString(context, "id");
 
         if (ReplenishingMines.getApi().getRegion(name) == null) {
             context.getSource().sendMessage(Text.literal("Unknown region!").formatted(Formatting.RED));
@@ -218,7 +258,7 @@ public class RegenMineCommand {
     }
 
     private static int regenInstantly(CommandContext<ServerCommandSource> context) {
-        String name = StringArgumentType.getString(context, "name");
+        String name = StringArgumentType.getString(context, "id");
 
         if (ReplenishingMines.getApi().getRegion(name) == null) {
             context.getSource().sendMessage(Text.literal("Unknown region!").formatted(Formatting.RED));

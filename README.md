@@ -15,6 +15,7 @@
 
 ### Modify Region Settings
 - `/regenmine modify <name> brushLoot <loot>`: Set loot obtained from brushing blocks.
+- `/regenmine modify <name> replacements <blockToReplace> <blockTable>`: Set a specific block in the template to be replaced with a block from the table.
 - `/regenmine modify <name> regenSpeedInTicks <ticks>`: Define regeneration duration (0 pauses regeneration).
 - `/regenmine modify <name> regenInstantly <true/false>`: Toggle instant regeneration after `regenSpeedInTicks`.
 - `/regenmine modify <name> save`: Save the current region's block state.

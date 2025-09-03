@@ -1,0 +1,19 @@
+# The id of this table
+ore_table:
+  - block: "minecraft:stone" # The type of state to spawn. You can easily use F3+I to copy a block state to paste here, then replace each " with \"
+    weight: 50 # How likely this state is to spawn
+  - block: "minecraft:suspicious_gravel"
+    weight: 25
+  - block: "minecraft:iron_ore"
+    weight: 15
+  - block: "minecraft:gold_ore"
+    weight: 5
+  - block: "minecraft:diamond_ore"
+    weight: 5
+
+chest_table:
+  # A chest with diamonds
+  - block: "minecraft:chest[facing=east,type=single,waterlogged=false]{Items:[{Slot:13b,count:1,id:\"minecraft:emerald\"}]}"
+    weight: 1
+  - block: "minecraft:oak_sign[rotation=4,waterlogged=false]{back_text:{color:\"black\",has_glowing_text:0b,messages:['\"\"','\"\"','\"\"','\"\"']},front_text:{color:\"black\",has_glowing_text:0b,messages:['\"\"','\"Test\"','\"\"','\"\"']},is_waxed:0b}"
+    weight: 1
