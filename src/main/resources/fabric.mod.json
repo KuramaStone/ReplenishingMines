@@ -11,6 +11,7 @@
 		"homepage": "https://fabricmc.net/",
 		"sources": "https://github.com/FabricMC/fabric-example-mod"
 	},
+	"accessWidener": "replenishingmines.accesswidener",
 	"license": "CC0-1.0",
 	"icon": "assets/replenishingmines/icon.png",
 	"environment": "*",
